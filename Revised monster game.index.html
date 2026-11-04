@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>The Monster Detective - P.1 Adjective Game</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Canvas Confetti for rewards -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Fredoka', 'Comic Neue', sans-serif;
+            background: linear-gradient(135deg, #a8edd9 0%, #fed6e3 100%);
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        
+        .detective-card {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .monster-box {
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor: pointer;
+        }
+        
+        .monster-box:hover {
+            transform: translateY(-8px) scale(1.03);
+        }
+        
+        .monster-box:active {
+            transform: scale(0.96);
+        }
+
+        .pulsing-audio {
+            animation: pulse-ring 1.5s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .highlight-word {
+            display: inline-block;
+            background-color: #fef08a;
+            color: #b45309;
+            padding: 2px 8px;
+            border-radius: 8px;
+            border: 2px dashed #f59e0b;
+        }
+
+        /* Custom SVG styling */
+        svg {
+            filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.15));
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-3 sm:p-6 overflow-x-hidden">
+
+    <!-- Top Header & Navigation -->
+    <header class="w-full max-w-4xl flex items-center justify-between bg-white/90 backdrop-blur-md px-4 py-3 rounded-2xl border-4 border-yellow-300 shadow-lg mb-4">
+        <div class="flex items-center space-x-3">
+            <div class="bg-amber-400 p-2 rounded-xl text-2xl border-2 border-amber-600 shadow-inner">
+                🔍
+            </div>
+            <div>
+                <h1 class="text-xl sm:text-2xl font-bold text-indigo-900 tracking-wide leading-none">Monster Detective</h1>
+                <span class="text-xs sm:text-sm font-semibold text-indigo-500">P.1 English Adjectives</span>
+            </div>
+        </div>
+
+        <!-- Level Indicator & Score -->
+        <div class="flex items-center space-x-3">
+            <div class="bg-indigo-100 border-2 border-indigo-300 px-3 py-1 rounded-xl text-center">
+                <span class="text-xs text-indigo-500 font-bold block uppercase">Level</span>
+                <span id="level-num" class="text-lg font-extrabold text-indigo-700">1 / 3</span>
+            </div>
+            <div class="bg-yellow-100 border-2 border-yellow-300 px-3 py-1 rounded-xl text-center flex items-center space-x-1">
+                <span class="text-2xl">⭐</span>
+                <span id="score-count" class="text-xl font-extrabold text-amber-600">0</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Game Container -->
+    <main class="w-full max-w-4xl flex-1 flex flex-col items-center justify-between">
+        
+        <!-- Progress Bar -->
+        <div class="w-full bg-white/60 rounded-full h-4 mb-4 border-2 border-white shadow-inner overflow-hidden">
+            <div id="progress-bar" class="bg-gradient-to-r from-green-400 to-emerald-500 h-full w-0 transition-all duration-500 ease-out rounded-full"></div>
+        </div>
+
+        <!-- Clue / Instruction Box -->
+        <section class="w-full bg-white border-4 border-indigo-400 rounded-3xl p-4 sm:p-6 detective-card mb-6 relative overflow-hidden">
+            <div class="absolute top-0 right-0 bg-indigo-500 text-white font-bold text-xs px-4 py-1 rounded-bl-2xl uppercase tracking-wider">
+                Case Clue #<span id="task-num">1</span>
+            </div>
+
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-start space-x-3">
+                    <div class="text-4xl sm:text-5xl shrink-0 mt-1">🕵️‍♂️</div>
+                    <div>
+                        <h2 class="text-sm font-bold text-indigo-400 uppercase tracking-wide">Witness Description:</h2>
+                        <div id="clue-text" class="text-xl sm:text-2xl font-bold text-slate-800 leading-snug mt-1">
+                            Loading case...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Text to Speech Button -->
+                <button id="audio-btn" onclick="speakClue()" class="pulsing-audio shrink-0 bg-rose-500 hover:bg-rose-600 active:scale-95 text-white font-bold px-4 py-3 rounded-2xl flex items-center space-x-2 shadow-lg border-b-4 border-rose-700 transition">
+                    <span class="text-2xl">🔊</span>
+                    <span class="text-base sm:text-lg">Listen</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Monsters Suspect Grid -->
+        <section id="monsters-container" class="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 my-auto">
+            <!-- Monster Cards will be generated dynamically here -->
+        </section>
+
+        <!-- Feedback Overlay Banner -->
+        <div id="feedback-banner" class="hidden w-full max-w-lg mt-4 p-4 rounded-2xl text-center font-bold text-lg shadow-xl border-4 transition-all animate-bounce">
+            <span id="feedback-text"></span>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-6 text-center text-xs font-bold text-indigo-700/60">
+        Primary 1 English Language • Adjectives: Big, Small, Fat, Thin, Short, Long
+    </footer>
+
+    <!-- Level Complete / Game Over Modal -->
+    <div id="modal-overlay" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-3xl border-8 border-yellow-400 p-6 sm:p-8 max-w-md w-full text-center shadow-2xl relative transform transition-all scale-100">
+            <div id="modal-icon" class="text-6xl mb-2 animate-bounce">🏆</div>
+            <h2 id="modal-title" class="text-3xl font-extrabold text-indigo-900">Level Cleared!</h2>
+            <p id="modal-subtitle" class="text-slate-600 font-semibold mt-2">You are a Master Detective!</p>
+            
+            <div class="my-6 bg-amber-50 rounded-2xl p-4 border-2 border-amber-200">
+                <div class="text-xs font-bold text-amber-700 uppercase">Total Stars Earned</div>
+                <div id="modal-stars" class="text-4xl font-black text-amber-500 mt-1">⭐⭐⭐</div>
+            </div>
+
+            <button id="modal-action-btn" onclick="nextLevelOrRestart()" class="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-extrabold text-xl py-4 rounded-2xl shadow-lg border-b-4 border-emerald-700 transition">
+                Next Level ➔
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript Game Logic -->
+    <script>
+        // Game State
+        let currentLevelIndex = 0;
+        let currentTaskIndex = 0;
+        let score = 0;
+        let totalStars = 0;
+        let isAnswerLocked = false;
+        let currentClueTextRaw = "";
+
+        // Game Levels Data
+        const levelsData = [
+            {
+                level: 1,
+                title: "Level 1: Single Feature Basics",
+                tasks: [
+                    {
+                        clue: "Find the monster with a BIG head!",
+                        highlightWords: ["BIG"],
+                        targetIndex: 0,
+                        monsters: [
+                            { head: 'big', body: 'normal', arms: 'normal', legs: 'normal', ears: 'normal', eyes: 'normal', color: '#8b5cf6' },
+                            { head: 'small', body: 'normal', arms: 'normal', legs: 'normal', ears: 'normal', eyes: 'normal', color: '#ec4899' },
+                            { head: 'normal', body: 'normal', arms: 'normal', legs: 'normal', ears: 'normal', eyes: 'normal', color: '#10b981' }
+                        ]
+                    },
+                    {
+                        clue: "Find the monster with LONG legs!",
+                        highlightWords: ["LONG"],
+                        targetIndex: 1,
+                        monsters: [
+                            { head: 'normal', body: 'normal', arms: 'normal', legs: 'short', color: '#f59e0b' },
+                            { head: 'normal', body: 'normal', arms: 'normal', legs: 'long', color: '#3b82f6' },
+                            { head: 'normal', body: 'normal', arms: 'normal', legs: 'normal', color: '#ef4444' }
+                        ]
+                    },
+                    {
+                        clue: "Find the monster with a FAT body!",
+                        highlightWords: ["FAT"],
+                        targetIndex: 2,
+                        monsters: [
+                            { head: 'normal', body: 'thin', arms: 'normal', legs: 'normal', color: '#14b8a6' },
+                            { head: 'normal', body: 'normal', arms: 'normal', legs: 'normal', color: '#6366f1' },
+                            { head: 'normal', body: 'fat', arms: 'normal', legs: 'normal', color: '#f97316' }
+                        ]
+                    }
+                ]
+            },
+            {
+                level: 2,
+                title: "Level 2: Opposite Features",
+                tasks: [
+                    {
+                        clue: "Find the monster with SMALL eyes and a LONG tail!",
+                        highlightWords: ["SMALL", "LONG"],
+                        targetIndex: 0,
+                        monsters: [
+                            { eyes: 'small', tail: 'long', body: 'normal', head: 'normal', color: '#a855f7' },
+                            { eyes: 'big', tail: 'short', body: 'normal', head: 'normal', color: '#06b6d4' },
+                            { eyes: 'small', tail: 'short', body: 'normal', head: 'normal', color: '#84cc16' }
+                        ]
+                    },
+                    {
+                        clue: "Find the monster with a THIN body and SHORT arms!",
+                        highlightWords: ["THIN", "SHORT"],
+                        targetIndex: 1,
+                        monsters: [
+                            { body: 'fat', arms: 'long', head: 'normal', legs: 'normal', color: '#eab308' },
+                            { body: 'thin', arms: 'short', head: 'normal', legs: 'normal', color: '#f43f5e' },
+                            { body: 'thin', arms: 'long', head: 'normal', legs: 'normal', color: '#3b82f6' }
+                        ]
+                    },
+                    {
+                        clue: "Find the monster with BIG ears and a FAT body!",
+                        highlightWords: ["BIG", "FAT"],
+                        targetIndex: 2,
+                        monsters: [
+                            { ears: 'small', body: 'thin', head: 'normal', legs: 'normal', color: '#10b981' },
+                            { ears: 'big', body: 'thin', head: 'normal', legs: 'normal', color: '#8b5cf6' },
+                            { ears: 'big', body: 'fat', head: 'normal', legs: 'normal', color: '#fb923c' }
+                        ]
+                    }
+                ]
+            },
+            {
+                level: 3,
+                title: "Level 3: Master Detective",
+                tasks: [
+                    {
+                        clue: "Find the monster with a FAT body, SHORT legs, and BIG eyes!",
+                        highlightWords: ["FAT", "SHORT", "BIG"],
+                        targetIndex: 1,
+                        monsters: [
+                            { body: 'thin', legs: 'long', eyes: 'small', color: '#06b6d4' },
+                            { body: 'fat', legs: 'short', eyes: 'big', color: '#ec4899' },
+                            { body: 'fat', legs: 'long', eyes: 'big', color: '#84cc16' }
+                        ]
+                    },
+                    {
+                        clue: "Find the monster with a THIN body, LONG arms, and a SMALL mouth!",
+                        highlightWords: ["THIN", "LONG", "SMALL"],
+                        targetIndex: 0,
+                        monsters: [
+                            { body: 'thin', arms: 'long', mouth: 'small', color: '#f59e0b' },
+                            { body: 'fat', arms: 'short', mouth: 'big', color: '#6366f1' },
+                            { body: 'thin', arms: 'short', mouth: 'small', color: '#10b981' }
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        // Initialize Game on Load
+        window.onload = function() {
+            loadTask();
+        };
+
+        // Render Current Task
+        function loadTask() {
+            isAnswerLocked = false;
+            hideFeedback();
+
+            const currentLevel = levelsData[currentLevelIndex];
+            const currentTask = currentLevel.tasks[currentTaskIndex];
+            currentClueTextRaw = currentTask.clue;
+
+            // Update Header Info
+            document.getElementById('level-num').innerText = `${currentLevelIndex + 1} / ${levelsData.length}`;
+            document.getElementById('task-num').innerText = `${currentTaskIndex + 1}`;
+
+            // Calculate Progress Bar Width
+            const totalTasksInGame = levelsData.reduce((sum, l) => sum + l.tasks.length, 0);
+            let completedTasks = 0;
+            for(let i = 0; i < currentLevelIndex; i++) {
+                completedTasks += levelsData[i].tasks.length;
+            }
+            completedTasks += currentTaskIndex;
+            const progressPercent = (completedTasks / totalTasksInGame) * 100;
+            document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+
+            // Render Formatted Clue Text with highlighted target adjectives
+            let formattedClue = currentTask.clue;
+            currentTask.highlightWords.forEach(word => {
+                const reg = new RegExp(`\\b(${word})\\b`, 'gi');
+                formattedClue = formattedClue.replace(reg, `<span class="highlight-word">$1</span>`);
+            });
+            document.getElementById('clue-text').innerHTML = formattedClue;
+
+            // Render Monster Suspects
+            const container = document.getElementById('monsters-container');
+            container.innerHTML = '';
+
+            currentTask.monsters.forEach((monsterData, index) => {
+                const card = document.createElement('div');
+                card.className = `monster-box bg-white rounded-3xl p-4 border-4 border-slate-200 hover:border-indigo-400 flex flex-col items-center justify-center detective-card shadow-md relative overflow-hidden`;
+                card.onclick = () => selectMonster(index);
+
+                // Add Suspect Badge
+                const badge = document.createElement('div');
+                badge.className = 'absolute top-3 left-3 bg-slate-100 text-slate-600 font-bold text-xs px-2 py-1 rounded-lg border border-slate-300';
+                badge.innerText = `Suspect ${String.fromCharCode(65 + index)}`;
+                card.appendChild(badge);
+
+                // SVG Monster Renderer
+                const svgMarkup = createMonsterSVG(monsterData);
+                const svgWrapper = document.createElement('div');
+                svgWrapper.className = 'w-48 h-48 sm:w-56 sm:h-56 flex items-center justify-center my-2';
+                svgWrapper.innerHTML = svgMarkup;
+                card.appendChild(svgWrapper);
+
+                container.appendChild(card);
+            });
+
+            // Auto Speak clue for P.1 kids
+            setTimeout(() => {
+                speakClue();
+            }, 300);
+        }
+
+        // Web Speech API - Text to Speech
+        function speakClue() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Stop ongoing speech
+                const utterance = new SpeechSynthesisUtterance(currentClueTextRaw);
+                utterance.lang = 'en-US';
+                utterance.rate = 0.85; // Slightly slower for P.1 students
+                utterance.pitch = 1.1;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // Generate Dynamic SVG Monster based on traits
+        function createMonsterSVG(m) {
+            const bodyColor = m.color || '#8b5cf6';
+            
+            // Trait sizing logic
+            let headR = 40;
+            if (m.head === 'big') headR = 58;
+            if (m.head === 'small') headR = 26;
+
+            let bodyWidth = 70;
+            let bodyHeight = 70;
+            if (m.body === 'fat') { bodyWidth = 100; bodyHeight = 85; }
+            if (m.body === 'thin') { bodyWidth = 45; bodyHeight = 80; }
+
+            let legLength = 40;
+            if (m.legs === 'long') legLength = 65;
+            if (m.legs === 'short') legLength = 20;
+
+            let armLength = 35;
+            if (m.arms === 'long') armLength = 60;
+            if (m.arms === 'short') armLength = 18;
+
+            let eyeSize = 10;
+            if (m.eyes === 'big') eyeSize = 16;
+            if (m.eyes === 'small') eyeSize = 6;
+
+            let earSize = 14;
+            if (m.ears === 'big') earSize = 26;
+            if (m.ears === 'small') earSize = 8;
+
+            const hasTail = m.tail;
+            let tailLength = m.tail === 'long' ? 70 : 25;
+
+            return `
+            <svg viewBox="0 0 200 220" class="w-full h-full">
+                <!-- Tail (if present) -->
+                ${hasTail ? `
+                    <path d="M 120 140 Q ${140 + tailLength/2} 120 ${130 + tailLength} ${160 - tailLength/3}" 
+                          stroke="${bodyColor}" stroke-width="12" stroke-linecap="round" fill="none"/>
+                ` : ''}
+
+                <!-- Legs -->
+                <line x1="75" y1="140" x2="75" y2="${140 + legLength}" stroke="${bodyColor}" stroke-width="14" stroke-linecap="round"/>
+                <line x1="125" y1="140" x2="125" y2="${140 + legLength}" stroke="${bodyColor}" stroke-width="14" stroke-linecap="round"/>
+                <!-- Feet -->
+                <ellipse cx="70" cy="${140 + legLength}" rx="12" ry="6" fill="#334155"/>
+                <ellipse cx="130" cy="${140 + legLength}" rx="12" ry="6" fill="#334155"/>
+
+                <!-- Arms -->
+                <line x1="60" y1="110" x2="${60 - armLength}" y2="${110 + armLength/2}" stroke="${bodyColor}" stroke-width="10" stroke-linecap="round"/>
+                <line x1="140" y1="110" x2="${140 + armLength}" y2="${110 + armLength/2}" stroke="${bodyColor}" stroke-width="10" stroke-linecap="round"/>
+
+                <!-- Body -->
+                <ellipse cx="100" cy="120" rx="${bodyWidth/2}" ry="${bodyHeight/2}" fill="${bodyColor}" />
+
+                <!-- Ears -->
+                <circle cx="${100 - headR + 5}" cy="${65 - headR/2}" r="${earSize}" fill="${bodyColor}" opacity="0.9"/>
+                <circle cx="${100 + headR - 5}" cy="${65 - headR/2}" r="${earSize}" fill="${bodyColor}" opacity="0.9"/>
+
+                <!-- Head -->
+                <circle cx="100" cy="65" r="${headR}" fill="${bodyColor}" />
+
+                <!-- Eyes -->
+                <circle cx="${100 - headR/3}" cy="60" r="${eyeSize}" fill="white" />
+                <circle cx="${100 + headR/3}" cy="60" r="${eyeSize}" fill="white" />
+                <circle cx="${100 - headR/3}" cy="60" r="${eyeSize/2}" fill="#0f172a" />
+                <circle cx="${100 + headR/3}" cy="60" r="${eyeSize/2}" fill="#0f172a" />
+
+                <!-- Mouth -->
+                ${m.mouth === 'small' ? 
+                    `<circle cx="100" cy="80" r="4" fill="#0f172a"/>` : 
+                    (m.mouth === 'big' ? 
+                        `<path d="M 85 75 Q 100 95 115 75 Z" fill="#0f172a"/>` : 
+                        `<path d="M 90 78 Q 100 88 110 78" stroke="#0f172a" stroke-width="4" stroke-linecap="round" fill="none"/>`
+                    )
+                }
+            </svg>
+            `;
+        }
+
+        // Handle Monster Selection
+        function selectMonster(selectedIndex) {
+            if (isAnswerLocked) return;
+
+            const currentTask = levelsData[currentLevelIndex].tasks[currentTaskIndex];
+            const monsterCards = document.querySelectorAll('.monster-box');
+
+            if (selectedIndex === currentTask.targetIndex) {
+                // Correct Answer Logic
+                isAnswerLocked = true;
+                score += 10;
+                totalStars += 1;
+                document.getElementById('score-count').innerText = score;
+
+                // Visual highlight correct card
+                monsterCards[selectedIndex].classList.add('ring-8', 'ring-emerald-400', 'bg-emerald-50');
+
+                showFeedback(true, "🎉 Excellent Detective! You found the right monster!");
+
+                // Play Success sound/confetti
+                if (window.confetti) {
+                    confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
+                }
+
+                setTimeout(() => {
+                    nextTask();
+                }, 1800);
+
+            } else {
+                // Incorrect Answer Logic
+                monsterCards[selectedIndex].classList.add('ring-8', 'ring-rose-400', 'bg-rose-50', 'animate-shake');
+                
+                showFeedback(false, "❌ Oops! That's not the right monster. Read/Listen to the clue again!");
+
+                setTimeout(() => {
+                    monsterCards[selectedIndex].classList.remove('ring-8', 'ring-rose-400', 'bg-rose-50', 'animate-shake');
+                }, 1500);
+            }
+        }
+
+        // Show Feedback Banner
+        function showFeedback(isCorrect, message) {
+            const banner = document.getElementById('feedback-banner');
+            const text = document.getElementById('feedback-text');
+            banner.classList.remove('hidden', 'bg-emerald-100', 'border-emerald-400', 'text-emerald-800', 'bg-rose-100', 'border-rose-400', 'text-rose-800');
+
+            if (isCorrect) {
+                banner.classList.add('bg-emerald-100', 'border-emerald-400', 'text-emerald-800');
+            } else {
+                banner.classList.add('bg-rose-100', 'border-rose-400', 'text-rose-800');
+            }
+            text.innerText = message;
+        }
+
+        function hideFeedback() {
+            document.getElementById('feedback-banner').classList.add('hidden');
+        }
+
+        // Advance Game Steps
+        function nextTask() {
+            currentTaskIndex++;
+            const currentLevel = levelsData[currentLevelIndex];
+
+            if (currentTaskIndex >= currentLevel.tasks.length) {
+                // Level Completed!
+                showLevelCompleteModal();
+            } else {
+                loadTask();
+            }
+        }
+
+        function showLevelCompleteModal() {
+            const modal = document.getElementById('modal-overlay');
+            const title = document.getElementById('modal-title');
+            const subtitle = document.getElementById('modal-subtitle');
+            const btn = document.getElementById('modal-action-btn');
+
+            modal.classList.remove('hidden');
+
+            if (currentLevelIndex < levelsData.length - 1) {
+                title.innerText = `Level ${currentLevelIndex + 1} Cleared!`;
+                subtitle.innerText = "Great job detective! Ready for harder clues?";
+                btn.innerText = "Start Next Level ➔";
+            } else {
+                title.innerText = "🏆 Master Detective!";
+                subtitle.innerText = "You solved all monster cases in town!";
+                btn.innerText = "Play Again 🔄";
+            }
+        }
+
+        function nextLevelOrRestart() {
+            document.getElementById('modal-overlay').classList.add('hidden');
+            if (currentLevelIndex < levelsData.length - 1) {
+                currentLevelIndex++;
+                currentTaskIndex = 0;
+            } else {
+                // Reset entire game
+                currentLevelIndex = 0;
+                currentTaskIndex = 0;
+                score = 0;
+                totalStars = 0;
+                document.getElementById('score-count').innerText = score;
+            }
+            loadTask();
+        }
+    </script>
+</body>
+</html>
